@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>宝宝喂养与睡眠日程（动态递进 v1.1）</title>
+<style>
+  :root{
+    --bg:#0f172a; --muted:#94a3b8; --text:#e5e7eb;
+    --feed:#22c55e; --sleep:#38bdf8; --card:#0b1222; --card2:#0f172a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 800px at 70% -20%,rgba(56,189,248,.08),transparent),radial-gradient(800px 600px at 10% 120%,rgba(34,197,94,.08),transparent),var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
+  .container{max-width:1100px;margin:34px auto;padding:0 20px}
+  .header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+  h1{font-size:24px;margin:0;font-weight:800}
+  .tag{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid rgba(148,163,184,.25);border-radius:12px;color:var(--muted)}
+  .version{color:var(--muted);font-size:12px;margin-left:8px}
+  .controls{display:grid;grid-template-columns:1fr;gap:14px;margin:12px 0}
+  @media(min-width:900px){.controls{grid-template-columns:1fr 1fr}}
+  .card{border-radius:14px;padding:14px;background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid rgba(148,163,184,.18)}
+  .card h3{margin:0 0 8px;font-size:16px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .label{color:var(--muted);font-size:13px}
+  input[type=time]{background:rgba(2,6,23,.5);border:1px solid rgba(148,163,184,.25);color:var(--text);padding:8px 10px;border-radius:10px}
+  button{background:rgba(255,255,255,.06);border:1px solid rgba(148,163,184,.35);color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer}
+  .preview{color:var(--muted);font-size:12px;margin-top:8px}
+  .countdowns{display:grid;grid-template-columns:1fr;gap:14px;margin:12px 0 18px}
+  @media(min-width:900px){.countdowns{grid-template-columns:1fr 1fr}}
+  .cd{border-radius:14px;padding:16px;background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(56,189,248,.10));border:1px solid rgba(245,158,11,.35);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .cd .title{font-weight:800}
+  .cd .sub{color:var(--muted);font-size:13px}
+  .cd .timer{font-variant-numeric:tabular-nums;font-weight:900;font-size:26px;padding:8px 12px;border-radius:12px;border:1px dashed rgba(245,158,11,.55)}
+  .grid{display:grid;grid-template-columns:1fr;gap:18px}
+  @media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
+  .panel{border-radius:16px;padding:16px;background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid rgba(148,163,184,.18)}
+  .panel h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px}
+  .dot{width:10px;height:10px;border-radius:999px;display:inline-block}
+  .feed .dot{background:var(--feed)} .sleep .dot{background:var(--sleep)}
+  .list{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+  .item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:rgba(2,6,23,.5);border:1px solid rgba(148,163,184,.16)}
+  .time{min-width:92px;font-variant-numeric:tabular-nums;font-weight:700}
+  .badge{padding:2px 8px;border:1px solid currentColor;border-radius:999px;font-size:12px}
+  .feed .badge{color:var(--feed)} .sleep .badge{color:var(--sleep)}
+  .footer{margin-top:16px;color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap}
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f172a">
+<link rel="icon" href="icon-192.png">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div><h1>宝宝日程 · 喂养 & 睡眠</h1><span class="version">v1.1</span></div>
+      <div class="tag" id="todayTag">本地时区 · 今天</div>
+    </div>
+
+    <div class="controls">
+      <div class="card">
+        <h3>🍼 喂养规则：下一次 = <b>上一次完成</b> + 3 小时</h3>
+        <div class="row">
+          <span class="label">最近一次<b>完成喂养</b>：</span>
+          <input id="feedComplete" type="time" step="60" value="06:30">
+          <button id="feedNow">刚刚喂完（设为现在）</button>
+        </div>
+        <div class="preview" id="feedPreview">预览：—</div>
+      </div>
+      <div class="card">
+        <h3>😴 睡眠规则：下一次 = <b>上一次醒来</b> + 2 小时</h3>
+        <div class="row">
+          <span class="label">最近一次<b>醒来</b>：</span>
+          <input id="wakeTime" type="time" step="60" value="09:05">
+          <button id="wakeNow">刚刚醒来（设为现在）</button>
+        </div>
+        <div class="preview" id="sleepPreview">预览：—</div>
+      </div>
+    </div>
+
+    <div class="countdowns">
+      <div class="cd">
+        <div>
+          <div class="title">下一次喂养</div>
+          <div class="sub" id="feedSub">—</div>
+        </div>
+        <div class="timer" id="feedTimer">--:--:--</div>
+      </div>
+      <div class="cd">
+        <div>
+          <div class="title">下一次小睡</div>
+          <div class="sub" id="sleepSub">—</div>
+        </div>
+        <div class="timer" id="sleepTimer">--:--:--</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="panel feed">
+        <h2><span class="dot"></span>🍼 接下来 6 次喂养</h2>
+        <ul class="list" id="feedList"></ul>
+      </section>
+      <section class="panel sleep">
+        <h2><span class="dot"></span>😴 接下来 6 次小睡</h2>
+        <ul class="list" id="sleepList"></ul>
+      </section>
+    </div>
+
+    <div class="footer">
+      <span>提示：手动修改时间会立即生效；如未更新，请刷新页面。</span>
+      <span id="buildStamp"></span>
+    </div>
+  </div>
+
+<script>
+  // Utils
+  const pad = n => String(n).padStart(2,'0');
+  const parseHM = hm => {
+    const [h,m] = hm.split(':').map(Number);
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
+  };
+  const fmtHM = d => d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  const addH = (d,h) => new Date(d.getTime() + h*3600e3);
+
+  // Elems
+  const feedCompleteInput = document.getElementById('feedComplete');
+  const wakeInput = document.getElementById('wakeTime');
+  const feedList = document.getElementById('feedList');
+  const sleepList = document.getElementById('sleepList');
+  const feedTimer = document.getElementById('feedTimer');
+  const sleepTimer = document.getElementById('sleepTimer');
+  const feedSub = document.getElementById('feedSub');
+  const sleepSub = document.getElementById('sleepSub');
+  const feedPreview = document.getElementById('feedPreview');
+  const sleepPreview = document.getElementById('sleepPreview');
+
+  // Buttons
+  document.getElementById('feedNow').onclick = ()=>{
+    const now = new Date();
+    feedCompleteInput.value = pad(now.getHours()) + ':' + pad(now.getMinutes());
+    render();
+  };
+  document.getElementById('wakeNow').onclick = ()=>{
+    const now = new Date();
+    wakeInput.value = pad(now.getHours()) + ':' + pad(now.getMinutes());
+    render();
+  };
+
+  // Manual edits trigger recompute
+  ['input','change'].forEach(ev => {
+    feedCompleteInput.addEventListener(ev, render);
+    wakeInput.addEventListener(ev, render);
+  });
+
+  const buildUpcoming = (base, stepH, n) => {
+    const arr = []; let t = new Date(base);
+    for(let i=0;i<n;i++){ t = addH(t, stepH); arr.push(new Date(t)); }
+    return arr;
+  };
+
+  function renderLists(){
+    const fc = parseHM(feedCompleteInput.value);
+    const feeds = buildUpcoming(fc, 3, 6);
+    feedList.innerHTML = feeds.map((d,i)=>`<li class="item"><span class="time">${fmtHM(d)}</span><span class="badge">#${i+1}</span></li>`).join('');
+    feedPreview.textContent = `预览：下一次喂养 ${fmtHM(feeds[0])}`;
+
+    const wk = parseHM(wakeInput.value);
+    const sleeps = buildUpcoming(wk, 2, 6);
+    sleepList.innerHTML = sleeps.map((d,i)=>`<li class="item"><span class="time">${fmtHM(d)}</span><span class="badge">#${i+1}</span></li>`).join('');
+    sleepPreview.textContent = `预览：下一次小睡 ${fmtHM(sleeps[0])}`;
+
+    feedSub.textContent = `基于最近完成喂养：${feedCompleteInput.value} → 下一次 ${fmtHM(feeds[0])}`;
+    sleepSub.textContent = `基于最近醒来：${wakeInput.value} → 下一次 ${fmtHM(sleeps[0])}`;
+  }
+
+  function tick(){
+    const now = new Date();
+    const fc = parseHM(feedCompleteInput.value);
+    let nf = addH(fc,3);
+    if(nf < now){ const steps = Math.ceil((now - nf) / (3*3600e3)); nf = addH(nf, steps*3); }
+    const wk = parseHM(wakeInput.value);
+    let ns = addH(wk,2);
+    if(ns < now){ const steps2 = Math.ceil((now - ns) / (2*3600e3)); ns = addH(ns, steps2*2); }
+
+    const fmtHMS = ms => {
+      if(ms<0) ms = 0; const s = Math.floor(ms/1000);
+      const hh = pad(Math.floor(s/3600)); const mm = pad(Math.floor((s%3600)/60)); const ss = pad(s%60);
+      return `${hh}:${mm}:${ss}`;
+    };
+    feedTimer.textContent = fmtHMS(nf - now);
+    sleepTimer.textContent = fmtHMS(ns - now);
+  }
+
+  function render(){ renderLists(); tick(); }
+
+  // Init
+  render();
+  setInterval(tick, 1000);
+
+  // Header date & build stamp
+  try{
+    document.getElementById('todayTag').textContent = '本地时区 · ' + new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'short'}).format(new Date());
+    document.getElementById('buildStamp').textContent = '构建时间：' + new Date().toLocaleString();
+  }catch(e){}
+</script>
+</body>
+</html>
