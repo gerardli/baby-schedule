@@ -20,10 +20,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # 关键：配置 Pages 环境（会下发一些部署所需的元数据）
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # 上传静态产物（我们就是仓库根目录）
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .   # 把仓库根目录作为静态站点产物上传
+          path: .
 
   deploy:
     needs: build
@@ -32,6 +38,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # 关键：真正把上一步的工件发布到 Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
