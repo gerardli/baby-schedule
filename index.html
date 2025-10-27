@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>宝宝喂养与睡眠日程（动态递进 v1.1）</title>
+<title>宝宝喂养与睡眠日程（动态递进 v1.2）</title>
 <style>
   :root{
     --bg:#0f172a; --muted:#94a3b8; --text:#e5e7eb;
@@ -43,6 +43,7 @@
   .badge{padding:2px 8px;border:1px solid currentColor;border-radius:999px;font-size:12px}
   .feed .badge{color:var(--feed)} .sleep .badge{color:var(--sleep)}
   .footer{margin-top:16px;color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap}
+  .overdue{border-color:rgba(239,68,68,.7)!important;color:#fecaca!important}
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0f172a">
@@ -51,13 +52,13 @@
 <body>
   <div class="container">
     <div class="header">
-      <div><h1>宝宝日程 · 喂养 & 睡眠</h1><span class="version">v1.1</span></div>
+      <div><h1>宝宝日程 · 喂养 & 睡眠</h1><span class="version">v1.2</span></div>
       <div class="tag" id="todayTag">本地时区 · 今天</div>
     </div>
 
     <div class="controls">
       <div class="card">
-        <h3>🍼 喂养规则：下一次 = <b>上一次完成</b> + 3 小时</h3>
+        <h3>🍼 喂养规则：下一次 = <b>上一次完成</b> + 4 小时</h3>
         <div class="row">
           <span class="label">最近一次<b>完成喂养</b>：</span>
           <input id="feedComplete" type="time" step="60" value="06:30">
@@ -159,7 +160,7 @@
 
   function renderLists(){
     const fc = parseHM(feedCompleteInput.value);
-    const feeds = buildUpcoming(fc, 3, 6);
+    const feeds = buildUpcoming(fc, 4, 6); // 改为 4 小时
     feedList.innerHTML = feeds.map((d,i)=>`<li class="item"><span class="time">${fmtHM(d)}</span><span class="badge">#${i+1}</span></li>`).join('');
     feedPreview.textContent = `预览：下一次喂养 ${fmtHM(feeds[0])}`;
 
@@ -175,8 +176,8 @@
   function tick(){
     const now = new Date();
     const fc = parseHM(feedCompleteInput.value);
-    let nf = addH(fc,3);
-    if(nf < now){ const steps = Math.ceil((now - nf) / (3*3600e3)); nf = addH(nf, steps*3); }
+    let nf = addH(fc,4); // 改为 4 小时
+    if(nf < now){ const steps = Math.ceil((now - nf) / (4*3600e3)); nf = addH(nf, steps*4); } // 改为 4 小时步长
     const wk = parseHM(wakeInput.value);
     let ns = addH(wk,2);
     if(ns < now){ const steps2 = Math.ceil((now - ns) / (2*3600e3)); ns = addH(ns, steps2*2); }
@@ -188,6 +189,12 @@
     };
     feedTimer.textContent = fmtHMS(nf - now);
     sleepTimer.textContent = fmtHMS(ns - now);
+
+    // 逾期高亮（喂养计时达到 00:00:00 视为到点/逾期）
+    const feedCd = document.getElementById('feedTimer');
+    const feedPanel = feedCd.closest('.cd');
+    const remaining = nf - now;
+    if (remaining <= 0) feedPanel.classList.add('overdue'); else feedPanel.classList.remove('overdue');
   }
 
   function render(){ renderLists(); tick(); }
