@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>宝宝喂养与睡眠日程（动态递进 v1.2）</title>
+<title>宝宝喂养与睡眠日程（动态递进 v1.3）</title>
 <style>
   :root{
     --bg:#0f172a; --muted:#94a3b8; --text:#e5e7eb;
@@ -52,7 +52,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <div><h1>宝宝日程 · 喂养 & 睡眠</h1><span class="version">v1.2</span></div>
+      <div><h1>宝宝日程 · 喂养 & 睡眠</h1><span class="version">v1.3</span></div>
       <div class="tag" id="todayTag">本地时区 · 今天</div>
     </div>
 
@@ -67,7 +67,7 @@
         <div class="preview" id="feedPreview">预览：—</div>
       </div>
       <div class="card">
-        <h3>😴 睡眠规则：下一次 = <b>上一次醒来</b> + 2 小时</h3>
+        <h3>😴 睡眠规则：下一次 = <b>上一次醒来</b> + 3 小时</h3>
         <div class="row">
           <span class="label">最近一次<b>醒来</b>：</span>
           <input id="wakeTime" type="time" step="60" value="09:05">
@@ -112,7 +112,6 @@
   </div>
 
 <script>
-  // Utils
   const pad = n => String(n).padStart(2,'0');
   const parseHM = hm => {
     const [h,m] = hm.split(':').map(Number);
@@ -122,7 +121,6 @@
   const fmtHM = d => d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   const addH = (d,h) => new Date(d.getTime() + h*3600e3);
 
-  // Elems
   const feedCompleteInput = document.getElementById('feedComplete');
   const wakeInput = document.getElementById('wakeTime');
   const feedList = document.getElementById('feedList');
@@ -134,7 +132,6 @@
   const feedPreview = document.getElementById('feedPreview');
   const sleepPreview = document.getElementById('sleepPreview');
 
-  // Buttons
   document.getElementById('feedNow').onclick = ()=>{
     const now = new Date();
     feedCompleteInput.value = pad(now.getHours()) + ':' + pad(now.getMinutes());
@@ -146,7 +143,6 @@
     render();
   };
 
-  // Manual edits trigger recompute
   ['input','change'].forEach(ev => {
     feedCompleteInput.addEventListener(ev, render);
     wakeInput.addEventListener(ev, render);
@@ -160,12 +156,12 @@
 
   function renderLists(){
     const fc = parseHM(feedCompleteInput.value);
-    const feeds = buildUpcoming(fc, 4, 6); // 改为 4 小时
+    const feeds = buildUpcoming(fc, 4, 6);
     feedList.innerHTML = feeds.map((d,i)=>`<li class="item"><span class="time">${fmtHM(d)}</span><span class="badge">#${i+1}</span></li>`).join('');
     feedPreview.textContent = `预览：下一次喂养 ${fmtHM(feeds[0])}`;
 
     const wk = parseHM(wakeInput.value);
-    const sleeps = buildUpcoming(wk, 2, 6);
+    const sleeps = buildUpcoming(wk, 3, 6);
     sleepList.innerHTML = sleeps.map((d,i)=>`<li class="item"><span class="time">${fmtHM(d)}</span><span class="badge">#${i+1}</span></li>`).join('');
     sleepPreview.textContent = `预览：下一次小睡 ${fmtHM(sleeps[0])}`;
 
@@ -176,11 +172,11 @@
   function tick(){
     const now = new Date();
     const fc = parseHM(feedCompleteInput.value);
-    let nf = addH(fc,4); // 改为 4 小时
-    if(nf < now){ const steps = Math.ceil((now - nf) / (4*3600e3)); nf = addH(nf, steps*4); } // 改为 4 小时步长
+    let nf = addH(fc,4);
+    if(nf < now){ const steps = Math.ceil((now - nf) / (4*3600e3)); nf = addH(nf, steps*4); }
     const wk = parseHM(wakeInput.value);
-    let ns = addH(wk,2);
-    if(ns < now){ const steps2 = Math.ceil((now - ns) / (2*3600e3)); ns = addH(ns, steps2*2); }
+    let ns = addH(wk,3);
+    if(ns < now){ const steps2 = Math.ceil((now - ns) / (3*3600e3)); ns = addH(ns, steps2*3); }
 
     const fmtHMS = ms => {
       if(ms<0) ms = 0; const s = Math.floor(ms/1000);
@@ -190,7 +186,6 @@
     feedTimer.textContent = fmtHMS(nf - now);
     sleepTimer.textContent = fmtHMS(ns - now);
 
-    // 逾期高亮（喂养计时达到 00:00:00 视为到点/逾期）
     const feedCd = document.getElementById('feedTimer');
     const feedPanel = feedCd.closest('.cd');
     const remaining = nf - now;
@@ -199,11 +194,9 @@
 
   function render(){ renderLists(); tick(); }
 
-  // Init
   render();
   setInterval(tick, 1000);
 
-  // Header date & build stamp
   try{
     document.getElementById('todayTag').textContent = '本地时区 · ' + new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'short'}).format(new Date());
     document.getElementById('buildStamp').textContent = '构建时间：' + new Date().toLocaleString();
